@@ -1,25 +1,18 @@
-import { Canvas, Circle, Group } from "@shopify/react-native-skia";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { StyleSheet } from 'react-native-unistyles'
+import PixelCanvas from "../components/PixelCanvas/PixelCanvas";
+import ColourPicker from "../components/ColourPicker/ColourPicker";
+import {  useState } from "react";
 
 export default function Index() {
-  const width = 256;
-  const height = 256;
-  const r = width * 0.33;
+  const [selectedColor, setSelectedColor] = useState('#06d6a0'); // Default color
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.text}> Canvas </Text>
-      <View style={{flex:1}}>
-      <Canvas style={{ width, height}}>
-      <Group blendMode="multiply">
-        <Circle cx={r} cy={r} r={r} color="cyan" />
-        <Circle cx={width - r} cy={r} r={r} color="magenta" />
-        <Circle cx={width / 2} cy={width - r} r={r} color="yellow" />
-      </Group>
-    </Canvas>
-      </View>
+      <ColourPicker selectedColor={selectedColor} onColorSelect={setSelectedColor} />
+      <PixelCanvas gridSize={100} initialColor={selectedColor}/>
     </ScrollView>
   );
 }
