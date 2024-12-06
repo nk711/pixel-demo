@@ -1,5 +1,9 @@
 # React Native Skia - Pixel Canvas Quick Demo 
 
+
+https://github.com/user-attachments/assets/77912632-bca9-4be9-91c5-43d8c10f4646
+
+
 1. Install dependencies
 
    ```bash
