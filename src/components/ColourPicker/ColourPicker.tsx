@@ -1,3 +1,4 @@
+import { usePixelStore } from '@/src/store/DrawStore';
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -10,7 +11,8 @@ const colors = [
   '#06d6a0', '#ff6f61', '#4e4b8b', '#ffcc00', '#ff64b1', '#00aaff', '#fa5c7c', '#ffffff', '#000000',
 ];
 
-const ColourPicker = ({ selectedColor, onColorSelect }: ColorPickerProps) => {
+const ColourPicker = () => {
+  const { selectedColor, setColor } = usePixelStore();
   return (
     <View style={styles.container}>
       {colors.map((color) => (
@@ -21,7 +23,7 @@ const ColourPicker = ({ selectedColor, onColorSelect }: ColorPickerProps) => {
             { backgroundColor: color },
             selectedColor === color && styles.selected,
           ]}
-          onPress={() => onColorSelect(color)}
+          onPress={() => setColor(color)}
         />
       ))}
     </View>
