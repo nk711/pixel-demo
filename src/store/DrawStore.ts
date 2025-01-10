@@ -1,50 +1,101 @@
-import { Color, PaintProps } from '@shopify/react-native-skia'
-import { Point } from 'react-native-gesture-handler/lib/typescript/web/interfaces'
-import { create}  from 'zustand'
+import { create } from 'zustand';
 
-
-export interface CompletedPoints {
-  id: number;
-  points: Point[];
-  color: Color;
-  width: number;
-  style: PaintProps['style'];
+export interface Cell {
+  x: number;
+  y: number;
 }
+
+export interface Annotation {
+  id: number;
+  cells: Cell[]; 
+  color: string;
+}
+
+//TODO: Split store into 2
 
 interface PixelStore {
   selectedColor: string;
-  filledCells: Map<string, string>;
+  annotations: Annotation[];
+  currentAnnotation: Annotation | null;
+  startAnnotation: (color: string) => void;
+  updateCurrentAnnotation: (cell: Cell) => void;
   setColor: (color: string) => void;
-  fillCell: (x: number, y: number, color: string) => void;
-  clearCells: () => void;
+  completeAnnotation: () => void;
+  clearAnnotations: () => void;
 }
 
-export const usePixelStore = create<PixelStore>((set) => {
-  const MAX_CELLS = 10000;
+const interpolateCells = (start: Cell, end: Cell) => {
+  const cells = [];
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const steps = Math.max(dx, dy);
 
+  for (let i = 1; i <= steps; i++) {
+    const x = Math.round(start.x + ((end.x - start.x) * i) / steps);
+    const y = Math.round(start.y + ((end.y - start.y) * i) / steps);
+    cells.push({ x, y });
+  }
+
+  return cells;
+};
+
+export const usePixelStore = create<PixelStore>((set) => {
   return {
-    selectedColor: "#06d6a0", // Default color
-    filledCells: new Map(), // Initial empty map
+    selectedColor: "#06d6a0",
+    annotations: [],
+    currentAnnotation: null,
+
     setColor: (color) => set({ selectedColor: color }),
 
-    fillCell: (x, y, color) => {
-      const cellKey = `${x},${y}`;
+    startAnnotation: (color) =>
+      set({
+        currentAnnotation: {
+          id: Date.now(),
+          cells: [],
+          color,
+        },
+      }),
 
+      updateCurrentAnnotation: (cell) => {
+        set((state) => {
+          if (!state.currentAnnotation) return state;
+      
+          const cellKey = `${cell.x},${cell.y}`;
+          const existingCells = new Set(
+            state.currentAnnotation.cells.map((c) => `${c.x},${c.y}`)
+          );
+      
+          if (existingCells.has(cellKey)) return state;
+      
+          const lastCell = state.currentAnnotation.cells[state.currentAnnotation.cells.length - 1];
+          if (lastCell) {
+            const interpolatedCells = interpolateCells(lastCell, cell);
+            return {
+              currentAnnotation: {
+                ...state.currentAnnotation,
+                cells: [...state.currentAnnotation.cells, ...interpolatedCells],
+              },
+            };
+          }
+      
+          return {
+            currentAnnotation: {
+              ...state.currentAnnotation,
+              cells: [...state.currentAnnotation.cells, cell],
+            },
+          };
+        });
+      },
+
+    completeAnnotation: () =>
       set((state) => {
-        if (state.filledCells.get(cellKey) === color) return state;
+        if (!state.currentAnnotation) return state;
+        return {
+          annotations: [...state.annotations, state.currentAnnotation],
+          currentAnnotation: null,
+        };
+      }),
 
-        state.filledCells.set(cellKey, color);
-
-        // If we exceed MAX_CELLS, remove the oldest
-        if (state.filledCells.size > MAX_CELLS) {
-          const iterator = state.filledCells.keys();
-          state.filledCells.delete(iterator.next().value); // Delete the oldest entry
-        }
-
-        return { filledCells: new Map(state.filledCells) }; // Return a new reference
-      });
-    },
-
-    clearCells: () => set({ filledCells: new Map() }), // Clear all cells
+    clearAnnotations: () => set({ annotations: [], currentAnnotation: null }),
   };
 });

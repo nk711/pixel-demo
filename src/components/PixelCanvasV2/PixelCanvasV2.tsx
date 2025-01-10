@@ -1,11 +1,10 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Dimensions, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Canvas, Rect, Skia, Path, usePictureAsTexture, Image } from "@shopify/react-native-skia";
+import { Rect, Skia, Path } from "@shopify/react-native-skia";
 import { StyleSheet } from "react-native-unistyles";
 import Button from "../Button/Button";
-import { usePixelStore } from "@/src/store/DrawStore";
-import Cell from "../Cell";
+import CompletedAnnotationsCanvas from "./CompletedAnnotations/CompletedAnnotations";
+import CurrentAnnotationCanvas from "./CurrentAnnotationCanvas/CurrentAnnotations";
 
 interface PixelCanvasProps {
   gridSize: number; // e.g., 16 for 16x16 grid
@@ -14,6 +13,7 @@ interface PixelCanvasProps {
  
 
 let counter = 0
+
 export default function PixelCanvas({
   gridSize = 16,
   tileSize = 16, 
@@ -22,99 +22,16 @@ export default function PixelCanvas({
   counter++;
   console.log('re-render', counter)
 
-
-  const { selectedColor, filledCells, fillCell, clearCells } = usePixelStore();
-
   const screenWidth = Dimensions.get("window").width;
   const cellDimension = Math.round(screenWidth / gridSize / 16) * 16;
   const canvasSize = cellDimension * gridSize;
   const limit = gridSize - 1 
 
-  const [showGrid, setShowGrid] = useState(true); // State for toggling the grid visibility
+  const [showGrid, setShowGrid] = useState(true); 
 
-  const lastDrawnCell = useRef<{ x: number, y: number } | null>(null);
-
-  
-
-  const fillLine = (x1: number, y1: number, x2: number, y2: number) => {
-    // Bresenham's line algorithm to draw a line between two points
-    const dx = Math.abs(x2 - x1);
-    const dy = Math.abs(y2 - y1);
-    const sx = x1 < x2 ? 1 : -1;
-    const sy = y1 < y2 ? 1 : -1;
-    let err = dx - dy;
-  
-    let x = x1;
-    let y = y1;
-  
-    while (true) {
-      fillCell(x, y, selectedColor); // Fill the current cell
-      if (x === x2 && y === y2) break;
-  
-      const e2 = err * 2;
-      if (e2 > -dy) {
-        err -= dy;
-        x += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y += sy;
-      }
-    }
-  };
-  
-
-
-  // Gesture for tap and drag drawing
-  const pan = Gesture.Pan()
-  .onStart((g) => {
-    if (g.x < 0 || g.y < 0) return;
-    const x = Math.floor(g.x / cellDimension);
-    const y = Math.floor(g.y / cellDimension);
-    if (x > limit|| y > limit) return;
-
-    // Draw the first cell immediately when touch starts
-    fillCell(x, y, selectedColor);
-    
-    // Store the initial cell
-    lastDrawnCell.current = { x, y }; 
-  })
-  .onUpdate((g) => {
-    if (g.x < 0 || g.y < 0) return;
-    const x = Math.floor(g.x / cellDimension);
-    const y = Math.floor(g.y / cellDimension);
-    if (x > limit|| y > limit) return;
-
-    // console.log(x,y, '---', g.x, g.y )
-    // setposition(`${g.x}, ${g.y},${x},${y}`)
-
-    // Only draw if the cell has changed
-    if (lastDrawnCell.current) {
-      const prevX = lastDrawnCell.current.x;
-      const prevY = lastDrawnCell.current.y;
-      // Check if the current position is different from the last drawn one
-      if (prevX !== x || prevY !== y) {
-        // Draw a line between the previous and current cell (fill in the gap)
-        fillLine(prevX, prevY, x, y); // Fill all the cells between the two positions
-        lastDrawnCell.current = { x, y }; // Update the last drawn cell
-      }
-    }
-  });
-
-  const tap = Gesture.Tap().onEnd((g) => {
-    if (g.x < 0 || g.y < 0) return;
-    const x = Math.floor(g.x / cellDimension);
-    const y = Math.floor(g.y / cellDimension);
-    if (x > limit|| y > limit) return;
-
-    fillCell(x, y, selectedColor);
-  });
-
-  const gestures = Gesture.Race(pan, tap);
 
   const toggleGrid = () => setShowGrid((prev) => !prev);
 
-    // Memoizing grid lines to avoid unnecessary recalculations
   const gridPaths = useMemo(() => {
       const gridMap = new Map<string, JSX.Element>();
     
@@ -144,8 +61,6 @@ export default function PixelCanvas({
   }, [gridSize, cellDimension, canvasSize]);
     
 
-    
-  // Memoizing checkered background calculation with Map
   const checkeredBackground = useMemo(() => {
     const checkeredTiles: JSX.Element[] = [];
     const tileDimension = cellDimension * tileSize;
@@ -174,41 +89,21 @@ export default function PixelCanvas({
       );
     }
     return checkeredTiles;
-  }, [cellDimension, tileSize, gridSize]);  // Ensure it's recomputed only when these value
+  }, [cellDimension, tileSize, gridSize]);  
 
-
-  const renderDrawing =  useMemo(() => {
-    return Array.from(filledCells.entries()).map(([key, color]) => {
-        const [x, y] = key.split(",").map(Number);
-        return (
-          <Cell
-            key={key}
-            x={x * cellDimension}
-            y={y * cellDimension}
-            size={cellDimension}
-            color={color}
-          />
-        );
-    })
-  }, [cellDimension, filledCells])
-
-  
   return (
     <View style={{ flex: 1 }}>
-      <Button onPress={clearCells}>Clear All</Button>
+      {/* <Button onPress={clearAnnotations}>Clear All</Button> */}
       <Button onPress={toggleGrid}>
         {showGrid ? "Hide Grid Lines" : "Show Grid Lines"}
       </Button>
-
-      <GestureDetector gesture={gestures}>
         <View style={[styles.canvas, { marginTop: cellDimension }]}>
-          <Canvas style={{ width: canvasSize, height: canvasSize }}>
-            {checkeredBackground}
-            {renderDrawing}
-            {showGrid && Array.from(gridPaths.values())}
-          </Canvas>
+            <CurrentAnnotationCanvas 
+              checkeredBackground={checkeredBackground} 
+              completedAnnotations= {<CompletedAnnotationsCanvas canvasSize={canvasSize} gridSize={gridSize} /> }
+              gridLayout={showGrid && Array.from(gridPaths.values())}
+              canvasSize={canvasSize} gridSize={gridSize}  />
         </View>
-      </GestureDetector>
     </View>
   );
 }
