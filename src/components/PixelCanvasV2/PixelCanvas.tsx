@@ -55,8 +55,6 @@ export default function PixelCanvas({
         ));
       });
     
-      console.log('RERENDER - lines')
-
       return gridMap;
   }, [gridSize, cellDimension, canvasSize]);
     
