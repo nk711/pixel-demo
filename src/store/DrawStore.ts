@@ -24,7 +24,7 @@ interface PixelStore {
   clearAnnotations: () => void;
 }
 
-const interpolateCells = (start: Cell, end: Cell) => {
+export const interpolateCells = (start: Cell, end: Cell) => {
   const cells = [];
   const dx = Math.abs(end.x - start.x);
   const dy = Math.abs(end.y - start.y);

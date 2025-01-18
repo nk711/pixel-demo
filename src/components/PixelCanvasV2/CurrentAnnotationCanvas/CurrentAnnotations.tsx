@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 import { Rect, Canvas } from "@shopify/react-native-skia";
 import { Cell, usePixelStore } from "@/src/store/DrawStore";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 
 interface CurrentAnnotationProps {
   checkeredBackground: ReactNode;
@@ -21,7 +22,7 @@ const CurrentAnnotationCanvas = ({
   const cellSize = canvasSize / gridSize; 
   const { selectedColor, currentAnnotation: annotation, startAnnotation, updateCurrentAnnotation, completeAnnotation} = usePixelStore();
   
-  const mapToGrid = (x: number, y: number, canvasSize: number, gridSize: number) => {
+  const mapToGrid = (x: number, y: number) => {
     const cellSize = canvasSize / gridSize;
     return {
       x: Math.floor(x / cellSize),
@@ -29,18 +30,26 @@ const CurrentAnnotationCanvas = ({
     };
   };
 
+  const onStartFunc = (gx: number, gy: number) => {
+    const { x, y } = mapToGrid(gx, gy);
+    startAnnotation(selectedColor);
+    updateCurrentAnnotation({x, y})
+  }
+  const onUpdateFunc = (gx: number, gy: number) => {
+    const { x, y } = mapToGrid(gx, gy);
+    updateCurrentAnnotation({x, y})
+  }
+
   const pan = Gesture.Pan()
     .onStart((g) => {
-      const { x, y } = mapToGrid(g.x, g.y, canvasSize, gridSize);
-      startAnnotation(selectedColor);
-      updateCurrentAnnotation({x, y})
+      'worklet'
+      runOnJS(onStartFunc)(g.x, g.y);
     })
     .onUpdate((g) => {
-      const { x, y } = mapToGrid(g.x, g.y, canvasSize, gridSize);
-      updateCurrentAnnotation({x, y})
+      runOnJS(onUpdateFunc)(g.x, g.y);
     })
     .onEnd(() => {
-      completeAnnotation();
+      runOnJS(completeAnnotation)();
     });
 
 

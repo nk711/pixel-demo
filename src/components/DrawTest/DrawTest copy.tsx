@@ -4,6 +4,7 @@ import { Skia, drawAsImage, Atlas, rect, Canvas, Group, Rect } from "@shopify/re
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Button from "../Button/Button";
 import { runOnJS } from "react-native-reanimated";
+import { interpolateCells } from "@/src/store/DrawStore";
 
 interface PixelCanvasProps {
   gridSize: number; // e.g., 16 for 16x16 grid
@@ -44,6 +45,13 @@ const DrawTest = ({ gridSize = 16, tileSize = 4 }: PixelCanvasProps) => {
   const addSquare = (x: number, y: number) => {
     const gridX = Math.floor(x / cellDimension);
     const gridY = Math.floor(y / cellDimension);
+
+    const lastCell = squares[squares.length - 1];
+    if (lastCell) {
+      const interpolatedCells = interpolateCells(lastCell,  { x: gridX, y: gridY });
+      setSquares((prev) => [...prev, ...interpolatedCells]);
+   
+    }
 
     // Prevent duplicates
     if (!squares.some((sq) => sq.x === gridX && sq.y === gridY)) {

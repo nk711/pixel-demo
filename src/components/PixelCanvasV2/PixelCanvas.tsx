@@ -1,13 +1,13 @@
-import React, { useMemo, useState } from "react";
-import { Dimensions, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Dimensions, StyleSheet, View } from "react-native";
 import { Rect, Skia, Path } from "@shopify/react-native-skia";
-import { StyleSheet } from "react-native-unistyles";
+// import { StyleSheet } from "react-native-unistyles";
 import Button from "../Button/Button";
 import CompletedAnnotationsCanvas from "./CompletedAnnotations/CompletedAnnotations";
 import CurrentAnnotationCanvas from "./CurrentAnnotationCanvas/CurrentAnnotations";
 
 interface PixelCanvasProps {
-  gridSize: number; // e.g., 16 for 16x16 grid
+  gridSize?: number; // e.g., 16 for 16x16 grid
   tileSize?: number;
 }
  
@@ -22,11 +22,22 @@ export default function PixelCanvas({
   counter++;
   console.log('re-render', counter)
 
-  const screenWidth = Dimensions.get("window").width;
-  const cellDimension = Math.round(screenWidth / gridSize / 16) * 16;
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get("window").width);
+
+  const cellDimension = Math.round(screenWidth / gridSize ) ;
   const canvasSize = cellDimension * gridSize;
   const limit = gridSize - 1 
 
+
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(Dimensions.get("window").width);
+    Dimensions.addEventListener("change", handleResize);
+
+    return () => {
+      Dimensions.removeEventListener("change", handleResize);
+    };
+  }, []);
+  
   const [showGrid, setShowGrid] = useState(true); 
 
 
@@ -89,8 +100,9 @@ export default function PixelCanvas({
     return checkeredTiles;
   }, [cellDimension, tileSize, gridSize]);  
 
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor:'red', margin: 20 }}>
       {/* <Button onPress={clearAnnotations}>Clear All</Button> */}
       <Button onPress={toggleGrid}>
         {showGrid ? "Hide Grid Lines" : "Show Grid Lines"}
@@ -111,5 +123,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     alignSelf: "center",
     justifyContent: "center",
+   
   },
 });
